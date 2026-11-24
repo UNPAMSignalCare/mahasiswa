@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNPAM Signal Care - Sistem Pengaduan Sinyal & Jaringan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        matcha: {
+                            50: '#f1f3ed',
+                            100: '#e3e7db',
+                            500: '#838F58', // Warna Matcha (#838F58)
+                            700: '#6a7447',
+                            800: '#525b36',
+                            900: '#3a4125',
+                        },
+                        strawberry: {
+                            50: '#fdf7f8',
+                            100: '#faeff1',
+                            200: '#F9D1D9', // Warna Pink Strawberry (#F9D1D9)
+                            300: '#f4acb7',
+                            500: '#e07a5f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            /* Latar belakang dengan motif polkadot halus */
+            background-color: #faeff1;
+            background-image: radial-gradient(#838F58 1.2px, transparent 1.2px), radial-gradient(#F9D1D9 1.2px, #faeff1 1.2px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+        
+        .bg-polkadot-banner {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.25) 2px, transparent 2px);
+            background-size: 16px 16px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-matcha-900 flex flex-col items-center justify-start pb-20 md:pb-6">
+
+    <!-- Header Full-Width -->
+    <header class="w-full bg-matcha-500 text-white px-6 md:px-12 py-4 sticky top-0 z-40 shadow-md flex flex-row items-center justify-between border-b-4 border-strawberry-200">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-strawberry-200 text-matcha-900 font-bold text-xl rounded-full flex items-center justify-center shadow">
+                U
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight">UNPAM Signal Care</h1>
+                <p class="text-[11px] text-strawberry-100">Sistem Pengaduan Jaringan & Sinyal Kampus</p>
+            </div>
+        </div>
+
+        <!-- Menu Navigasi Laptop -->
+        <nav class="hidden md:flex flex-row items-center gap-6 text-sm font-medium text-strawberry-100">
+            <button onclick="navigateTo('home')" class="hover:text-white transition">Beranda</button>
+            <button onclick="navigateTo('pengaduan')" class="hover:text-white transition">Pengaduan</button>
+            <button onclick="navigateTo('status')" class="hover:text-white transition">Status</button>
+            <button onclick="navigateTo('info')" class="hover:text-white transition">Info Gangguan</button>
+            <button onclick="navigateTo('riwayat')" class="hover:text-white transition">Riwayat</button>
+        </nav>
+
+        <div id="userHeaderProfile" class="hidden items-center gap-2">
+            <button onclick="logout()" title="Keluar" class="text-strawberry-100 hover:text-white p-1 rounded-lg hover:bg-matcha-700 transition">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Dynamic Views Area -->
+    <main class="flex-1 p-4 md:p-8 pb-12 overflow-y-auto w-full max-w-6xl mx-auto">
+
+        <!-- 1. LOGIN PAGE -->
+        <section id="viewLogin" class="w-full max-w-md mx-auto my-auto p-6 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-strawberry-200 mt-6">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-strawberry-200 text-matcha-900 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i data-lucide="wifi" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-matcha-900">Selamat Datang</h2>
+                <p class="text-xs text-matcha-700 mt-1">Silakan masuk menggunakan akun MyUnpam Anda</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">Nama Lengkap *</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-3 top-3 text-matcha-500"></i>
+                        <input type="text" id="loginNama" required placeholder="Masukkan Nama Lengkap" class="w-full pl-9 pr-3 py-2.5 text-sm border border-strawberry-200 rounded-xl focus:ring-2 focus:ring-matcha-500 outline-none transition bg-strawberry-50/30">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">NIM (Nomor Induk Mahasiswa) *</label>
+                    <div class="relative">
+                        <i data-lucide="id-card" class="w-4 h-4 absolute left-3 top-3 text-matcha-500"></i>
+                        <input type="text" id="loginNim" required placeholder="Contoh: 201011400123" class="w-full pl-9 pr-3 py-2.5 text-sm border border-strawberry-200 rounded-xl focus:ring-2 focus:ring-matcha-500 outline-none transition bg-strawberry-50/30">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">Kata Sandi / Password *</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-3 text-matcha-500"></i>
+                        <input type="password" id="loginPassword" required placeholder="Masukkan kata sandi" class="w-full pl-9 pr-3 py-2.5 text-sm border border-strawberry-200 rounded-xl focus:ring-2 focus:ring-matcha-500 outline-none transition bg-strawberry-50/30">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-matcha-500 hover:bg-matcha-700 text-white font-semibold py-3 rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2 mt-2">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Masuk Akun
+                </button>
+            </form>
+
+            <div class="mt-8 text-center text-xs text-matcha-500">
+                Sistem Pelaporan Sinyal Resmi Universitas Pamulang
+            </div>
+        </section>
+
+        <!-- 2. BERANDA / HOME PAGE -->
+        <section id="viewHome" class="hidden space-y-5 w-full">
+            <div class="bg-gradient-to-r from-matcha-500 to-matcha-700 rounded-2xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden bg-polkadot-banner border-2 border-strawberry-200">
+                <div class="relative z-10 max-w-xl">
+                    <span class="inline-block px-3 py-1 bg-strawberry-200/30 text-strawberry-100 rounded-full text-[10px] font-semibold mb-2 backdrop-blur-sm border border-strawberry-200/30">Layanan Mahasiswa</span>
+                    <h2 class="text-xl md:text-2xl font-bold leading-tight">Solusi Cepat untuk Koneksi Lancar</h2>
+                    <p class="text-xs md:text-sm text-strawberry-100 mt-2 opacity-90">Laporkan gangguan jaringan atau sinyal di seluruh area kampus UNPAM dengan cepat.</p>
+                </div>
+                <i data-lucide="wifi" class="w-40 h-40 absolute -right-6 -bottom-6 text-white/10 hidden md:block"></i>
+            </div>
+
+            <div class="bg-strawberry-200/50 border border-strawberry-300 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-matcha-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-matcha-700 font-medium">Mahasiswa Terautentikasi</p>
+                        <p id="displayName" class="text-xs font-bold text-matcha-900">Nama: -</p>
+                        <p id="displayNim" class="text-[11px] text-matcha-800">NIM: -</p>
+                    </div>
+                </div>
+                <span class="text-[10px] bg-white text-matcha-900 px-2.5 py-1 rounded-full font-semibold border border-strawberry-300">Aktif</span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="navigateTo('pengaduan')" class="p-4 md:p-6 bg-white/90 backdrop-blur-sm rounded-xl border border-strawberry-200 hover:border-matcha-500 hover:shadow-md transition text-left group">
+                    <div class="w-10 h-10 bg-strawberry-200 text-matcha-900 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="file-plus-2" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-matcha-900 text-sm md:text-base">Buat Pengaduan</h3>
+                    <p class="text-[11px] text-matcha-700 mt-1">Laporkan masalah sinyal</p>
+                </button>
+
+                <button onclick="navigateTo('status')" class="p-4 md:p-6 bg-white/90 backdrop-blur-sm rounded-xl border border-strawberry-200 hover:border-matcha-500 hover:shadow-md transition text-left group">
+                    <div class="w-10 h-10 bg-matcha-100 text-matcha-700 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-matcha-900 text-sm md:text-base">Cek Status Pengaduan</h3>
+                    <p class="text-[11px] text-matcha-700 mt-1">Lacak perkembangan laporan Anda</p>
+                </button>
+
+                <button onclick="navigateTo('info')" class="p-4 md:p-6 bg-white/90 backdrop-blur-sm rounded-xl border border-strawberry-200 hover:border-matcha-500 hover:shadow-md transition text-left group">
+                    <div class="w-10 h-10 bg-strawberry-200 text-matcha-900 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="radio" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-matcha-900 text-sm md:text-base">Info Gangguan</h3>
+                    <p class="text-[11px] text-matcha-700 mt-1">Lihat gangguan yang sedang terjadi</p>
+                </button>
+
+                <button onclick="navigateTo('riwayat')" class="p-4 md:p-6 bg-white/90 backdrop-blur-sm rounded-xl border border-strawberry-200 hover:border-matcha-500 hover:shadow-md transition text-left group">
+                    <div class="w-10 h-10 bg-matcha-100 text-matcha-700 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="history" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-matcha-900 text-sm md:text-base">Riwayat Pengaduan</h3>
+                    <p class="text-[11px] text-matcha-700 mt-1">Daftar Pengaduan Anda</p>
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. BUAT PENGADUAN PAGE -->
+        <section id="viewPengaduan" class="hidden space-y-4 w-full bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-sm border border-strawberry-200">
+            <div class="flex items-center gap-2 text-matcha-900 border-b border-strawberry-200 pb-3">
+                <button onclick="navigateTo('home')" class="p-1 hover:bg-strawberry-100 rounded-lg text-matcha-700">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <h2 class="font-bold text-base md:text-lg">Buat Pengaduan</h2>
+            </div>
+
+            <p class="text-xs text-matcha-700">Pilih lokasi kampus dan isi data pengaduan dengan lengkap.</p>
+
+            <form onsubmit="handleFormPengaduan(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">Lokasi Kampus *</label>
+                    <select id="formKampus" required class="w-full py-2.5 px-3 text-sm border border-strawberry-200 rounded-xl bg-white focus:ring-2 focus:ring-matcha-500 outline-none">
+                        <option value="">Pilih Lokasi Kampus</option>
+                        <option value="Unpam Pusat">Unpam Pusat</option>
+                        <option value="Unpam Viktor">Unpam Viktor</option>
+                        <option value="Unpam Witana Harja">Unpam Witana Harja</option>
+                        <option value="Unpam Serang">Unpam Serang</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-matcha-800 mb-1">Gedung / Area *</label>
+                        <input type="text" id="formGedung" required placeholder="Contoh: Gedung B" class="w-full py-2.5 px-3 text-sm border border-strawberry-200 rounded-xl outline-none focus:ring-2 focus:ring-matcha-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-matcha-800 mb-1">Ruang / Lantai *</label>
+                        <input type="text" id="formLantai" required placeholder="Contoh: Lt. 3 / R. 320" class="w-full py-2.5 px-3 text-sm border border-strawberry-200 rounded-xl outline-none focus:ring-2 focus:ring-matcha-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-matcha-800 mb-1">Jaringan / Provider Bermasalah *</label>
+                        <select id="formProvider" required class="w-full py-2.5 px-3 text-sm border border-strawberry-200 rounded-xl bg-white focus:ring-2 focus:ring-matcha-500 outline-none">
+                            <option value="">Pilih Jaringan / Provider</option>
+                            <option value="Telkomsel">Telkomsel</option>
+                            <option value="Indosat Ooredoo Hutchison">Indosat / Tri</option>
+                            <option value="XL Axiata / Axis">XL Axiata / Axis</option>
+                            <option value="Smartfren">Smartfren</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-matcha-800 mb-1">Jenis Kendala *</label>
+                        <select id="formKendala" required class="w-full py-2.5 px-3 text-sm border border-strawberry-200 rounded-xl bg-white focus:ring-2 focus:ring-matcha-500 outline-none">
+                            <option value="">Pilih Jenis Gangguan</option>
+                            <option value="Sinyal Hilang Total (No Service)">Sinyal Hilang Total (No Service)</option>
+                            <option value="Jaringan Lelet / Internet Lambat">Jaringan Lelet / Internet Lambat</option>
+                            <option value="Koneksi Terputus-putus (RTO)">Koneksi Terputus-putus (RTO)</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">Deskripsi Detail Kendala *</label>
+                    <textarea id="formDeskripsi" required rows="3" maxlength="500" placeholder="Tuliskan detail kendala sinyal yang Anda alami..." class="w-full p-3 text-sm border border-strawberry-200 rounded-xl outline-none focus:ring-2 focus:ring-matcha-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-matcha-800 mb-1">
+                        Upload Bukti (Foto/Screenshot) * <span class="text-matcha-600 font-bold">(Maks. 5 MB)</span>
+                    </label>
+                    <div class="border-2 border-dashed border-strawberry-300 bg-strawberry-50/40 rounded-xl p-4 text-center hover:bg-strawberry-100/60 transition relative cursor-pointer">
+                        <input type="file" id="formFoto" accept="image/png, image/jpeg, image/jpg" required onchange="handleFileSelect(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div id="uploadPlaceholder" class="space-y-1">
+                            <i data-lucide="camera" class="w-8 h-8 text-matcha-500 mx-auto"></i>
+                            <p class="text-xs font-medium text-matcha-900">Tap untuk pilih file foto</p>
+                            <p class="text-[10px] text-matcha-600">Format: JPG, PNG (Maksimal 5 MB)</p>
+                        </div>
+                        <div id="uploadPreview" class="hidden flex-col items-center gap-2">
+                            <img id="imgPreviewSrc" class="max-h-36 rounded-lg shadow-sm border border-strawberry-200" alt="Preview Foto">
+                            <span id="imgSizeLabel" class="text-[11px] font-semibold text-matcha-800 bg-matcha-100 px-2.5 py-0.5 rounded-full border border-matcha-200"></span>
+                        </div>
+                    </div>
+                    <p id="fileError" class="text-xs text-rose-500 mt-1 font-medium hidden flex items-center gap-1">
+                        <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Ukuran foto melebihi 5 MB! Pilih foto yang lebih kecil.
+                    </p>
+                </div>
+
+                <button type="submit" id="btnSubmitForm" class="w-full bg-strawberry-200 hover:bg-strawberry-300 text-matcha-900 font-bold py-3 rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2 mt-4">
+                    <span id="btnSubmitText" class="flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Kirim Pengaduan</span>
+                    <span id="btnSubmitLoading" class="hidden flex items-center gap-2"><svg class="animate-spin h-4 w-4 text-matcha-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Mengirimkan Pengaduan...</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- 4. SUKSES KIRIM PENGADUAN -->
+        <section id="viewSukses" class="hidden text-center py-8 space-y-6 w-full max-w-xl mx-auto bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-sm border border-strawberry-200">
+            <div class="w-20 h-20 bg-matcha-100 text-matcha-700 rounded-full flex items-center justify-center mx-auto shadow-inner animate-bounce">
+                <i data-lucide="check-circle-2" class="w-12 h-12"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-matcha-900">Pengaduan Berhasil Dikirim!</h2>
+                <p class="text-xs text-matcha-700 mt-2 px-4">Pengaduan Anda akan segera diproses oleh tim teknis kami.</p>
+            </div>
+            <div class="bg-strawberry-100 border border-strawberry-300 rounded-2xl p-4 max-w-xs mx-auto">
+                <p class="text-[11px] text-matcha-700 font-medium">Nomor Pengaduan / Tiket Anda</p>
+                <div class="flex items-center justify-center gap-2 mt-2">
+                    <span id="createdTicketNumber" class="text-lg font-extrabold text-matcha-900 tracking-wider">#UNPAM-00000</span>
+                    <button onclick="copyTicketNumber()" title="Salin Tiket" class="p-1.5 bg-white border border-strawberry-300 rounded-lg text-matcha-700 hover:bg-strawberry-50">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <button onclick="navigateTo('home')" class="w-full bg-matcha-500 hover:bg-matcha-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2">
+                <i data-lucide="home" class="w-4 h-4"></i> Kembali ke Beranda
+            </button>
+        </section>
+
+        <!-- 5. CEK STATUS PENGADUAN -->
+        <section id="viewStatus" class="hidden space-y-4 w-full bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-sm border border-strawberry-200">
+            <div class="flex items-center gap-2 text-matcha-900 border-b border-strawberry-200 pb-3">
+                <button onclick="navigateTo('home')" class="p-1 hover:bg-strawberry-100 rounded-lg text-matcha-700">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <h2 class="font-bold text-base md:text-lg">Cek Status Pengaduan</h2>
+            </div>
+            <div class="flex gap-2 max-w-xl">
+                <input type="text" id="searchTicketInput" placeholder="Contoh: UNPAM-20261012-1001" class="flex-1 px-3 py-2.5 text-sm border border-strawberry-200 rounded-xl outline-none focus:ring-2 focus:ring-matcha-500 uppercase">
+                <button onclick="searchStatus()" class="bg-matcha-500 hover:bg-matcha-700 text-white px-5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="search" class="w-4 h-4"></i> Cek
+                </button>
+            </div>
+            <div id="statusResultArea" class="hidden space-y-4 pt-2">
+                <div class="bg-strawberry-50/50 border border-strawberry-200 rounded-2xl p-5 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b border-strawberry-200 pb-3">
+                        <div>
+                            <p class="text-[10px] text-matcha-600 font-medium">Nomor Tiket</p>
+                            <p id="resultTicketNo" class="font-bold text-matcha-900 text-sm md:text-base">#UNPAM-000</p>
+                        </div>
+                        <!-- Dua Status Terpisah: Pengerjaan & Keputusan Akhir -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-col items-start sm:items-end">
+                                <span class="text-[9px] text-matcha-600 font-medium mb-0.5">Progres Pengerjaan</span>
+                                <span id="resultPengerjaanBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200">Belum Selesai (Diproses)</span>
+                            </div>
+                            <div class="flex flex-col items-start sm:items-end">
+                                <span class="text-[9px] text-matcha-600 font-medium mb-0.5">Keputusan Laporan</span>
+                                <span id="resultKeputusanBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-strawberry-200 text-matcha-900 border border-strawberry-300">Menunggu Keputusan</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs md:text-sm">
+                        <div><span class="text-matcha-600 block text-[10px]">Tanggal</span><span id="resultDate" class="font-semibold text-matcha-800">-</span></div>
+                        <div><span class="text-matcha-600 block text-[10px]">Lokasi</span><span id="resultLokasi" class="font-semibold text-matcha-800">-</span></div>
+                        <div><span class="text-matcha-600 block text-[10px]">Gedung / Ruang</span><span id="resultGedung" class="font-semibold text-matcha-800">-</span></div>
+                        <div><span class="text-matcha-600 block text-[10px]">Kendala</span><span id="resultKendala" class="font-semibold text-matcha-800">-</span></div>
+                    </div>
+                    <div id="resultFotoContainer" class="pt-2 border-t border-strawberry-200 hidden">
+                        <span class="text-[10px] text-matcha-600 block mb-1">Bukti Foto:</span>
+                        <img id="resultFotoImg" class="w-full max-h-48 object-cover rounded-lg border border-strawberry-200 shadow-sm">
+                    </div>
+                </div>
+            </div>
+            <div id="statusNotFound" class="hidden text-center py-8 text-matcha-600">
+                <i data-lucide="file-x-2" class="w-12 h-12 mx-auto mb-2 text-strawberry-300"></i>
+                <p class="text-xs font-semibold">Nomor pengaduan tidak ditemukan.</p>
+            </div>
+        </section>
+
+        <!-- 6. INFORMASI GANGGUAN -->
+        <section id="viewInfo" class="hidden space-y-4 w-full bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-sm border border-strawberry-200">
+            <div class="flex items-center gap-2 text-matcha-900 border-b border-strawberry-200 pb-3">
+                <button onclick="navigateTo('home')" class="p-1 hover:bg-strawberry-100 rounded-lg text-matcha-700">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <h2 class="font-bold text-base md:text-lg">Informasi Gangguan</h2>
+            </div>
+            <div id="infoGangguanList" class="space-y-3"></div>
+        </section>
+
+        <!-- 7. RIWAYAT PENGADUAN -->
+        <section id="viewRiwayat" class="hidden space-y-4 w-full bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-sm border border-strawberry-200">
+            <div class="flex items-center gap-2 text-matcha-900 border-b border-strawberry-200 pb-3">
+                <button onclick="navigateTo('home')" class="p-1 hover:bg-strawberry-100 rounded-lg text-matcha-700">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <h2 class="font-bold text-base md:text-lg">Riwayat Pengaduan</h2>
+            </div>
+            <div id="riwayatList" class="space-y-3"></div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (HP Only) -->
+    <nav id="userBottomNav" class="bg-white border-t border-strawberry-200 fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md grid grid-cols-4 py-2 text-center text-matcha-700 z-40 md:hidden shadow-lg">
+        <button onclick="navigateTo('home')" class="flex flex-col items-center justify-center text-matcha-900 font-semibold"><i data-lucide="home" class="w-5 h-5"></i><span class="text-[10px] mt-0.5">Beranda</span></button>
+        <button onclick="navigateTo('pengaduan')" class="flex flex-col items-center justify-center hover:text-matcha-900"><i data-lucide="plus-circle" class="w-5 h-5"></i><span class="text-[10px] mt-0.5">Pengaduan</span></button>
+        <button onclick="navigateTo('status')" class="flex flex-col items-center justify-center hover:text-matcha-900"><i data-lucide="search" class="w-5 h-5"></i><span class="text-[10px] mt-0.5">Status</span></button>
+        <button onclick="navigateTo('riwayat')" class="flex flex-col items-center justify-center hover:text-matcha-900"><i data-lucide="history" class="w-5 h-5"></i><span class="text-[10px] mt-0.5">Riwayat</span></button>
+    </nav>
+
+    <!-- SCRIPT APPLICATION -->
+    <script>
+        const firebaseConfig = { databaseURL: "https://unpamsignalcare-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUserName = localStorage.getItem('unpam_nama') || null;
+        let currentUserNim = localStorage.getItem('unpam_nim') || null;
+        let selectedFileBase64 = null;
+        let reportsData = {};
+        let infoGangguanData = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (currentUserNim) {
+                updateProfileDisplay();
+                document.getElementById('userHeaderProfile').classList.remove('hidden');
+                document.getElementById('userHeaderProfile').classList.add('flex');
+                navigateTo('home');
+            } else {
+                navigateTo('login');
+            }
+
+            db.ref('reports').on('value', (snap) => { 
+                reportsData = snap.val() || {}; 
+                renderRiwayat(); 
+                // Update realtime jika mahasiswa sedang membuka hasil cek status
+                if (!document.getElementById('statusResultArea').classList.contains('hidden')) {
+                    searchStatus();
+                }
+            });
+            db.ref('info_gangguan').on('value', (snap) => { infoGangguanData = snap.val() || {}; renderInfoGangguan(); });
+        });
+
+        // Helper untuk memisahkan tampilan Status Pengerjaan (Selesai / Belum) & Keputusan Akhir (Diterima / Ditolak)
+        function getReportStatusInfo(item) {
+            // Cek status pengerjaan
+            let pengerjaan = item.statusPengerjaan;
+            if (!pengerjaan) {
+                if (item.status === 'Selesai') pengerjaan = 'Selesai';
+                else if (item.status === 'Dalam Penanganan') pengerjaan = 'Dalam Penanganan';
+                else pengerjaan = 'Belum Selesai';
+            }
+
+            // Cek keputusan akhir
+            let keputusan = item.statusKeputusan;
+            if (!keputusan) {
+                if (item.status === 'Laporan Diterima') keputusan = 'Laporan Diterima';
+                else if (item.status === 'Laporan Ditolak') keputusan = 'Laporan Ditolak';
+                else keputusan = 'Menunggu Keputusan';
+            }
+
+            // Styling badge pengerjaan
+            let pengerjaanLabel = pengerjaan === 'Selesai' ? 'Selesai' : (pengerjaan === 'Dalam Penanganan' ? 'Dalam Penanganan' : 'Belum Selesai');
+            let pengerjaanClass = pengerjaan === 'Selesai' 
+                ? 'bg-sky-100 text-sky-800 border border-sky-200' 
+                : (pengerjaan === 'Dalam Penanganan' 
+                    ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-200');
+
+            // Styling badge keputusan
+            let keputusanClass = keputusan === 'Laporan Diterima'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : (keputusan === 'Laporan Ditolak'
+                    ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                    : 'bg-strawberry-200 text-matcha-900 border border-strawberry-300');
+
+            return { pengerjaanLabel, pengerjaanClass, keputusan, keputusanClass };
+        }
+
+        function updateProfileDisplay() {
+            if (currentUserName) {
+                document.getElementById('displayName').innerText = `Nama: ${currentUserName}`;
+            }
+            if (currentUserNim) {
+                document.getElementById('displayNim').innerText = `NIM: ${currentUserNim}`;
+            }
+        }
+
+        function navigateTo(section) {
+            ['viewLogin', 'viewHome', 'viewPengaduan', 'viewSukses', 'viewStatus', 'viewInfo', 'viewRiwayat'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById('view' + section.charAt(0).toUpperCase() + section.slice(1)).classList.remove('hidden');
+            document.getElementById('userBottomNav').classList.toggle('hidden', section === 'login');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const nama = document.getElementById('loginNama').value.trim();
+            const nim = document.getElementById('loginNim').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (nama && nim && password) {
+                currentUserName = nama;
+                currentUserNim = nim;
+                localStorage.setItem('unpam_nama', nama);
+                localStorage.setItem('unpam_nim', nim);
+                
+                updateProfileDisplay();
+                document.getElementById('userHeaderProfile').classList.remove('hidden');
+                document.getElementById('userHeaderProfile').classList.add('flex');
+                navigateTo('home');
+            }
+        }
+
+        function logout() {
+            currentUserName = null;
+            currentUserNim = null;
+            localStorage.removeItem('unpam_nama');
+            localStorage.removeItem('unpam_nim');
+            document.getElementById('userHeaderProfile').classList.add('hidden');
+            document.getElementById('userHeaderProfile').classList.remove('flex');
+            navigateTo('login');
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            const fileError = document.getElementById('fileError');
+            const submitBtn = document.getElementById('btnSubmitForm');
+            if (!file) return;
+
+            const MAX_SIZE = 5 * 1024 * 1024;
+
+            if (file.size > MAX_SIZE) {
+                fileError.classList.remove('hidden');
+                e.target.value = '';
+                selectedFileBase64 = null;
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            fileError.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1000;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    selectedFileBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('imgPreviewSrc').src = selectedFileBase64;
+                    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                    document.getElementById('imgSizeLabel').innerText = `Ukuran: ${sizeInMB} MB (Telah Dioptimasi)`;
+                    document.getElementById('uploadPlaceholder').classList.add('hidden');
+                    document.getElementById('uploadPreview').classList.remove('hidden');
+                    document.getElementById('uploadPreview').classList.add('flex');
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleFormPengaduan(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('btnSubmitForm');
+            const submitText = document.getElementById('btnSubmitText');
+            const submitLoading = document.getElementById('btnSubmitLoading');
+
+            submitBtn.disabled = true;
+            submitText.classList.add('hidden');
+            submitLoading.classList.remove('hidden');
+
+            const ticketNo = `UNPAM-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${Math.floor(1000 + Math.random() * 9000)}`;
+            const newReport = {
+                ticket: ticketNo,
+                nama: currentUserName || 'Mahasiswa UNPAM',
+                nim: currentUserNim || '201011400000',
+                kampus: document.getElementById('formKampus').value,
+                gedung: document.getElementById('formGedung').value,
+                lantai: document.getElementById('formLantai').value,
+                provider: document.getElementById('formProvider').value,
+                kendala: document.getElementById('formKendala').value,
+                deskripsi: document.getElementById('formDeskripsi').value,
+                foto: selectedFileBase64 || null,
+                date: new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }),
+                status: 'Diproses',
+                statusPengerjaan: 'Belum Selesai',
+                statusKeputusan: 'Menunggu Keputusan',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            db.ref('reports/' + ticketNo).set(newReport, (err) => {
+                submitBtn.disabled = false;
+                submitText.classList.remove('hidden');
+                submitLoading.classList.add('hidden');
+
+                if (!err) {
+                    document.getElementById('createdTicketNumber').innerText = `#${ticketNo}`;
+                    e.target.reset();
+                    document.getElementById('uploadPlaceholder').classList.remove('hidden');
+                    document.getElementById('uploadPreview').classList.add('hidden');
+                    document.getElementById('uploadPreview').classList.remove('flex');
+                    selectedFileBase64 = null;
+                    navigateTo('sukses');
+                } else {
+                    alert('Gagal mengirim pengaduan: ' + err.message);
+                }
+            });
+        }
+
+        function copyTicketNumber() {
+            navigator.clipboard.writeText(document.getElementById('createdTicketNumber').innerText);
+            alert('Nomor tiket disalin!');
+        }
+
+        function searchStatus() {
+            const val = document.getElementById('searchTicketInput').value.trim().toUpperCase().replace('#', '');
+            const found = Object.values(reportsData).find(r => r.ticket.toUpperCase() === val);
+            if (found) {
+                const st = getReportStatusInfo(found);
+
+                document.getElementById('statusNotFound').classList.add('hidden');
+                document.getElementById('statusResultArea').classList.remove('hidden');
+                document.getElementById('resultTicketNo').innerText = `#${found.ticket}`;
+                document.getElementById('resultDate').innerText = found.date;
+                document.getElementById('resultLokasi').innerText = found.kampus;
+                document.getElementById('resultGedung').innerText = `${found.gedung} / ${found.lantai}`;
+                document.getElementById('resultKendala').innerText = found.kendala;
+
+                // Tampilkan 2 Badge Status (Selesai/Belum & Diterima/Ditolak)
+                const badgePengerjaan = document.getElementById('resultPengerjaanBadge');
+                badgePengerjaan.innerText = st.pengerjaanLabel;
+                badgePengerjaan.className = `px-3 py-1 text-xs font-bold rounded-full ${st.pengerjaanClass}`;
+
+                const badgeKeputusan = document.getElementById('resultKeputusanBadge');
+                badgeKeputusan.innerText = st.keputusan;
+                badgeKeputusan.className = `px-3 py-1 text-xs font-bold rounded-full ${st.keputusanClass}`;
+
+                if (found.foto) {
+                    document.getElementById('resultFotoImg').src = found.foto;
+                    document.getElementById('resultFotoContainer').classList.remove('hidden');
+                } else {
+                    document.getElementById('resultFotoContainer').classList.add('hidden');
+                }
+            } else {
+                document.getElementById('statusResultArea').classList.add('hidden');
+                document.getElementById('statusNotFound').classList.remove('hidden');
+            }
+        }
+
+        function renderInfoGangguan() {
+            const list = document.getElementById('infoGangguanList');
+            const arr = Object.values(infoGangguanData);
+            if (arr.length === 0) { list.innerHTML = `<p class="text-xs text-matcha-600 text-center py-6">Tidak ada info gangguan.</p>`; return; }
+            list.innerHTML = arr.map(i => `
+                <div class="bg-white border border-strawberry-200 rounded-xl p-4 space-y-2 shadow-sm">
+                    <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-strawberry-200 text-matcha-900">${i.statusTag}</span>
+                    <h4 class="font-bold text-xs md:text-sm text-matcha-900">${i.title}</h4>
+                    <p class="text-[11px] text-matcha-700">${i.location}</p>
+                </div>
+            `).join('');
+        }
+
+        function renderRiwayat() {
+            const list = document.getElementById('riwayatList');
+            const arr = Object.values(reportsData).filter(r => r.nim === currentUserNim);
+            if (arr.length === 0) { list.innerHTML = `<p class="text-xs text-matcha-600 text-center py-6">Belum ada riwayat.</p>`; return; }
+            
+            arr.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            list.innerHTML = arr.map(item => {
+                const st = getReportStatusInfo(item);
+                return `
+                <div class="bg-white border border-strawberry-200 rounded-xl p-4 space-y-2.5 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b border-strawberry-100 pb-2">
+                        <div>
+                            <span class="font-bold text-xs text-matcha-900">#${item.ticket}</span>
+                            <span class="text-[10px] text-matcha-600 block">${item.date || ''}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full ${st.pengerjaanClass}">
+                                Pengerjaan: ${st.pengerjaanLabel}
+                            </span>
+                            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full ${st.keputusanClass}">
+                                ${st.keputusan}
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs md:text-sm font-semibold text-matcha-900">${item.kendala} (${item.provider})</p>
+                        <p class="text-[11px] text-matcha-700 mt-0.5">${item.kampus} - ${item.gedung} (${item.lantai})</p>
+                    </div>
+                </div>
+            `}).join('');
+        }
+    </script>
+</body>
+</html>
